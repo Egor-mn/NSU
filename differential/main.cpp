@@ -7,6 +7,10 @@
 //
 
 #include <iostream>
+#include <fstream>
+
+std::ifstream in("input.txt");
+std::ofstream out("output.txt");
 
 class Expression {
 public:
@@ -22,7 +26,7 @@ public:
         return new Number(0);
     }
     void print() {
-        std::cout << N;
+        out << N;
     }
 };
 
@@ -34,7 +38,7 @@ public:
         return new Number(1);
     }
     void print() {
-        std::cout << X;
+        out << X;
     }
 };
 
@@ -46,11 +50,11 @@ public:
         return new Add(E1->diff(), E2->diff());
     }
     void print() {
-        std::cout << "(";
+        out << "(";
         E1->print();
-        std::cout << "+";
+        out << "+";
         E2->print();
-        std::cout << ")";
+        out << ")";
     }
 };
 
@@ -62,11 +66,11 @@ public:
         return new Sub(E1->diff(), E2->diff());
     }
     void print() {
-        std::cout << "(";
+        out << "(";
         E1->print();
-        std::cout << "-";
+        out << "-";
         E2->print();
-        std::cout << ")";
+        out << ")";
     }
 };
 
@@ -78,11 +82,11 @@ public:
         return new Add(new Mul(E1->diff(), E2), new Mul(E1, E2->diff()));
     }
     void print() {
-        std::cout << "(";
+        out << "(";
         E1->print();
-        std::cout << "*";
+        out << "*";
         E2->print();
-        std::cout << ")";
+        out << ")";
     }
 };
 
@@ -94,19 +98,48 @@ public:
         return new Div(new Sub(new Mul(E1->diff(), E2), new Mul(E1, E2->diff())), new Mul(E2, E2));
     }
     void print() {
-        std::cout << "(";
+        out << "(";
         E1->print();
-        std::cout << ")/(";
+        out << ")/(";
         E2->print();
-        std::cout << ")";
+        out << ")";
     }
 };
 
+Expression *scan(int prior = 0) {
+    Expression *e;
+    char c;
+    
+    while (in >> c && !in.eof()) {
+        if (c == ')') return e;
+        if (c == '(') e = scan();
+        if (c == 'x') e = new Variable(c);
+        if (c == '*') e = new Mul(e, scan(1));
+        if (c == '/') e = new Div(e, scan(1));
+        if (c == '+') e = new Add(e, scan());
+        if (c == '-') e = new Sub(e, scan());
+        
+        if (c >= '0' && c <= '9') {
+            int num = 0;
+            char prev = c;
+            while (c >= '0' && c <= '9' && c != '\0' && !in.eof()) {
+                num = 10 * num + (c - '0');
+                prev = c;
+                in >> c;
+            }
+            in.putback(c);
+            c = prev;
+            e = new Number(num);
+        }
+
+        if (prior == 1) return e;
+    }
+    return e;
+}
+
 int main() {
-    Expression *e = new Add(new Number(3), new Mul (new Number (2), new Variable('x')));
-    e->print();
-    std::cout << std::endl;
-    Expression*de=e->diff();
+    Expression *e = scan();
+    Expression *de=e->diff();
     de->print();
     return 0;
 }
