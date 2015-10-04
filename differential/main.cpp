@@ -8,16 +8,13 @@
 
 #include <iostream>
 #include <fstream>
-#include "math.h"
 
 std::ifstream in("input.txt");
 std::ofstream out("output.txt");
 
-char var = 'x';
-
 class Expression {
 public:
-    virtual Expression *diff() = 0;
+    virtual Expression *diff(char x) = 0;
     virtual Expression *simplify() = 0;
     virtual void print() = 0;
     virtual bool operator== (double x) = 0;
@@ -28,7 +25,7 @@ class Number : public Expression {
 public:
     Number(double n): N(n) {}
     bool operator== (double x){ return N == x; }
-    Expression *diff() { return new Number(0); }
+    Expression *diff(char x) { return new Number(0); }
     Expression *simplify() { return this; }
     void print() { out << N; }
 };
@@ -38,19 +35,12 @@ class Variable : public Expression {
 public:
     Variable(char x): X(x) {}
     bool operator== (double x){ return false; }
-    Expression *diff() { return new Number(1); }
+    Expression *diff(char x) {
+        if (X == x) return new Number(1);
+        else return new Number(0);
+    }
     Expression *simplify() { return this; }
     void print() { out << X; }
-};
-
-class Constant : public Expression {
-    char C;
-public:
-    Constant(char x): C(x) {}
-    bool operator== (double x){ return false; }
-    Expression *diff() { return new Number(0); }
-    Expression *simplify() { return this; }
-    void print() { out << C; }
 };
 
 class Add : public Expression {
@@ -58,8 +48,8 @@ class Add : public Expression {
 public:
     Add(Expression *e1, Expression *e2): E1(e1), E2(e2) {}
     bool operator== (double x){ return false; }
-    Expression *diff() {
-        return new Add(E1->diff(), E2->diff());
+    Expression *diff(char x) {
+        return new Add(E1->diff(x), E2->diff(x));
     }
     Expression *simplify() {
         E1 = E1->simplify();
@@ -82,8 +72,8 @@ class Sub : public Expression {
 public:
     Sub(Expression *e1, Expression *e2): E1(e1), E2(e2) {}
     bool operator== (double x){ return false; }
-    Expression *diff() {
-        return new Sub(E1->diff(), E2->diff());
+    Expression *diff(char x) {
+        return new Sub(E1->diff(x), E2->diff(x));
     }
     Expression *simplify() {
         E1 = E1->simplify();
@@ -106,8 +96,8 @@ class Mul : public Expression {
 public:
     Mul(Expression *e1, Expression *e2): E1(e1), E2(e2) {}
     bool operator== (double x){ return false; }
-    Expression *diff() {
-        return new Add(new Mul(E1->diff(), E2), new Mul(E1, E2->diff()));
+    Expression *diff(char x) {
+        return new Add(new Mul(E1->diff(x), E2), new Mul(E1, E2->diff(x)));
     }
     Expression *simplify() {
         E1 = E1->simplify();
@@ -131,8 +121,8 @@ class Div : public Expression {
 public:
     Div(Expression *e1, Expression *e2): E1(e1), E2(e2) {}
     bool operator== (double x){ return false; }
-    Expression *diff() {
-        return new Div(new Sub(new Mul(E1->diff(), E2), new Mul(E1, E2->diff())), new Mul(E2, E2));
+    Expression *diff(char x) {
+        return new Div(new Sub(new Mul(E1->diff(x), E2), new Mul(E1, E2->diff(x))), new Mul(E2, E2));
     }
     Expression *simplify() {
         E1 = E1->simplify();
@@ -151,19 +141,9 @@ public:
 };
 
 Number *readNumber(char c) {
-    bool point = false;
-    double num = 0;
-    int degree = 0;
-    
-    while ((c >= '0' && c <= '9' && !in.eof()) || c == '.') {
-        if (c == '.') { point = true; in >> c; continue; }
-        if (point) num += (c - '0') / pow(10.0, ++degree);
-        else num = 10 * num + (c - '0');
-        in >> c;
-    }
-    
     in.putback(c);
-    return new Number(num);
+    double x; in >> x;
+    return new Number(x);
 }
 
 Expression *scan(int priority = 0) {
@@ -171,17 +151,24 @@ Expression *scan(int priority = 0) {
     char c;
     
     while (in >> c && !in.eof()) {
+        char next;
+        in >> next;
+        in.putback(next);
+        
         if (c == ')') return e;
         if (c == '(') e = scan();
         if (c == '*') e = new Mul(e, scan(1));
         if (c == '/') e = new Div(e, scan(1));
         if (c == '+') e = new Add(e, scan());
         if (c == '-') e = new Sub(e, scan());
-        if (c == var) e = new Variable(c);
-        if (c >= '0' && c <= '9') e = readNumber(c);
-        if (((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) && c != var)
-            e = new Constant(c);
-
+        
+        if (c >= '0' && c <= '9') { e = readNumber(c); if (next == ')') return e;}
+        if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')){
+            e = new Variable(c);
+            if (next == ')') return e;
+        }
+        
+        
         if (priority == 1) return e;
     }
     return e;
@@ -189,8 +176,7 @@ Expression *scan(int priority = 0) {
 
 int main() {
     Expression *e = scan();
-    Expression *de = e->diff();
-    de = de->simplify();
+    Expression *de = e->diff('x');
     de->print();
     
     in.close();
