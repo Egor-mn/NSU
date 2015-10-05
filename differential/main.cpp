@@ -17,13 +17,13 @@ public:
     virtual Expression *diff(char x) = 0;
     virtual Expression *simplify() = 0;
     virtual void print() = 0;
-    virtual bool operator== (double x) = 0;
+    virtual bool operator== (double x) { return false; }
 };
 
 class Number : public Expression {
     double N;
 public:
-    Number(double n): N(n) {}
+    Number(double n) : N(n) {}
     bool operator== (double x){ return N == x; }
     Expression *diff(char x) { return new Number(0); }
     Expression *simplify() { return this; }
@@ -33,8 +33,7 @@ public:
 class Variable : public Expression {
     char X;
 public:
-    Variable(char x): X(x) {}
-    bool operator== (double x){ return false; }
+    Variable(char x) : X(x) {}
     Expression *diff(char x) {
         if (X == x) return new Number(1);
         else return new Number(0);
@@ -46,8 +45,7 @@ public:
 class Add : public Expression {
     Expression *E1, *E2;
 public:
-    Add(Expression *e1, Expression *e2): E1(e1), E2(e2) {}
-    bool operator== (double x){ return false; }
+    Add(Expression *e1, Expression *e2) : E1(e1), E2(e2) {}
     Expression *diff(char x) {
         return new Add(E1->diff(x), E2->diff(x));
     }
@@ -70,8 +68,7 @@ public:
 class Sub : public Expression {
     Expression *E1, *E2;
 public:
-    Sub(Expression *e1, Expression *e2): E1(e1), E2(e2) {}
-    bool operator== (double x){ return false; }
+    Sub(Expression *e1, Expression *e2) : E1(e1), E2(e2) {}
     Expression *diff(char x) {
         return new Sub(E1->diff(x), E2->diff(x));
     }
@@ -94,8 +91,7 @@ public:
 class Mul : public Expression {
     Expression *E1, *E2;
 public:
-    Mul(Expression *e1, Expression *e2): E1(e1), E2(e2) {}
-    bool operator== (double x){ return false; }
+    Mul(Expression *e1, Expression *e2) : E1(e1), E2(e2) {}
     Expression *diff(char x) {
         return new Add(new Mul(E1->diff(x), E2), new Mul(E1, E2->diff(x)));
     }
@@ -119,8 +115,7 @@ public:
 class Div : public Expression {
     Expression *E1, *E2;
 public:
-    Div(Expression *e1, Expression *e2): E1(e1), E2(e2) {}
-    bool operator== (double x){ return false; }
+    Div(Expression *e1, Expression *e2) : E1(e1), E2(e2) {}
     Expression *diff(char x) {
         return new Div(new Sub(new Mul(E1->diff(x), E2), new Mul(E1, E2->diff(x))), new Mul(E2, E2));
     }
@@ -140,38 +135,149 @@ public:
     }
 };
 
+class Stack{
+    class Node{
+    public:
+        Node* next;
+        char c;
+        Node(char c){ this->c = c; }
+    };
+    Node *top;
+public:
+    Stack(){ top = NULL; }
+    ~Stack(){
+        while (top != NULL){
+            Node* t = top;
+            top = top->next;
+            delete t;
+        }
+    }
+    void push(char c){
+        Node *n = new Node(c);
+        n->next = top;
+        top = n;
+    }
+    char pop() {
+        Node* t = top;
+        top = top->next;
+        int tdata = t->c;
+        delete(t);
+        return tdata;
+    }
+    bool empty() {
+        return top == NULL;
+    }
+    char last(){
+        if (this->empty())
+            return 0;
+        return top->c;
+    }
+};
+
+class Stack_ex{
+    class Node{
+    public:
+        Node* next;
+        Expression *c;
+        Node(Expression *e) : c(e) {}
+    };
+    Node *top;
+public:
+    Stack_ex(){ top = NULL; }
+    ~Stack_ex(){
+        while (top != NULL){
+            Node* t = top;
+            top = top->next;
+            delete t;
+        }
+    }
+    void push(Expression *c){
+        Node *n = new Node(c);
+        n->next = top;
+        top = n;
+    }
+    bool empty() {
+        return top == NULL;
+    }
+    Expression *pop(){
+        Node* t = top;
+        top = top->next;
+        Expression *tdata = t->c;
+        delete(t);
+        return tdata;
+    }
+};
+
 Number *readNumber(char c) {
     in.putback(c);
     double x; in >> x;
     return new Number(x);
 }
 
-Expression *scan(int priority = 0) {
-    Expression *e;
+int priority(char c) {
+    switch (c) {
+        case '(': return 0;
+        case ')': return 0;
+        case '-': return 1;
+        case '+': return 1;
+        case '*': return 2;
+        case '/': return 2;
+        default: return 0;
+    }
+}
+
+Expression *scan() {
+    Expression *e = new Number(0);
     char c;
     
+    Stack a;
+    Stack_ex res;
+    
     while (in >> c && !in.eof()) {
-        char next;
-        in >> next;
-        in.putback(next);
-        
-        if (c == ')') return e;
-        if (c == '(') e = scan();
-        if (c == '*') e = new Mul(e, scan(1));
-        if (c == '/') e = new Div(e, scan(1));
-        if (c == '+') e = new Add(e, scan());
-        if (c == '-') e = new Sub(e, scan());
-        
-        if (c >= '0' && c <= '9') { e = readNumber(c); if (next == ')') return e;}
-        if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')){
-            e = new Variable(c);
-            if (next == ')') return e;
+        if (c >= '0' && c <= '9') {
+            e = readNumber(c);
+            res.push(e);
         }
         
+        if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')){
+            e = new Variable(c);
+            res.push(e);
+        }
         
-        if (priority == 1) return e;
+        if (c == '+' || c == '-' || c == '*' || c == '/' || c == '(' || c == ')') {
+            if (a.empty() || c == '(') {
+                a.push(c);
+            }
+            else {
+                while (priority(c) <= priority(a.last()) && a.last() != '(') {
+                    Expression *e2 = res.pop();
+                    Expression *e1 = res.pop();
+                    
+                    switch (a.pop()) {
+                        case '-': { res.push(new Sub(e1, e2)); break; }
+                        case '+': { res.push(new Add(e1, e2)); break; }
+                        case '*': { res.push(new Mul(e1, e2)); break; }
+                        case '/': { res.push(new Div(e1, e2)); break; }
+                    }                    
+                }
+                if (c == ')') a.pop();
+                else a.push(c);
+            }
+        }
     }
-    return e;
+    
+    while (!a.empty()) {
+        Expression *e2 = res.pop();
+        Expression *e1 = res.pop();
+        
+        switch (a.pop()) {
+            case '-': { res.push(new Sub(e1, e2)); break; }
+            case '+': { res.push(new Add(e1, e2)); break; }
+            case '*': { res.push(new Mul(e1, e2)); break; }
+            case '/': { res.push(new Div(e1, e2)); break; }
+        }
+    }
+    return res.pop();
 }
 
 int main() {
