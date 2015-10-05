@@ -9,14 +9,11 @@
 #include <iostream>
 #include <fstream>
 
-std::ifstream in("input.txt");
-std::ofstream out("output.txt");
-
 class Expression {
 public:
     virtual Expression *diff(char x) = 0;
     virtual Expression *simplify() = 0;
-    virtual void print() = 0;
+    virtual void print(std::ofstream& output) = 0;
     virtual bool operator== (double x) { return false; }
 };
 
@@ -24,10 +21,10 @@ class Number : public Expression {
     double N;
 public:
     Number(double n) : N(n) {}
-    bool operator== (double x){ return N == x; }
+    bool operator== (double x) { return N == x; }
     Expression *diff(char x) { return new Number(0); }
     Expression *simplify() { return this; }
-    void print() { out << N; }
+    void print(std::ofstream& output) { output << N; }
 };
 
 class Variable : public Expression {
@@ -39,13 +36,13 @@ public:
         else return new Number(0);
     }
     Expression *simplify() { return this; }
-    void print() { out << X; }
+    void print(std::ofstream& output) { output << X; }
 };
 
 class Add : public Expression {
     Expression *E1, *E2;
 public:
-    Add(Expression *e1, Expression *e2) : E1(e1), E2(e2) {}
+    Add(Expression *e1, Expression *e2): E1(e1), E2(e2) {}
     Expression *diff(char x) {
         return new Add(E1->diff(x), E2->diff(x));
     }
@@ -56,19 +53,19 @@ public:
         if (*E2 == 0) return E1;
         return this;
     }
-    void print() {
-        out << "(";
-        E1->print();
-        out << "+";
-        E2->print();
-        out << ")";
+    void print(std::ofstream& output) {
+        output << "(";
+        E1->print(output);
+        output << "+";
+        E2->print(output);
+        output << ")";
     }
 };
 
 class Sub : public Expression {
     Expression *E1, *E2;
 public:
-    Sub(Expression *e1, Expression *e2) : E1(e1), E2(e2) {}
+    Sub(Expression *e1, Expression *e2): E1(e1), E2(e2) {}
     Expression *diff(char x) {
         return new Sub(E1->diff(x), E2->diff(x));
     }
@@ -79,19 +76,19 @@ public:
         if (*E2 == 0) return E1;
         return this;
     }
-    void print() {
-        out << "(";
-        E1->print();
-        out << "-";
-        E2->print();
-        out << ")";
+    void print(std::ofstream& output) {
+        output << "(";
+        E1->print(output);
+        output << "-";
+        E2->print(output);
+        output << ")";
     }
 };
 
 class Mul : public Expression {
     Expression *E1, *E2;
 public:
-    Mul(Expression *e1, Expression *e2) : E1(e1), E2(e2) {}
+    Mul(Expression *e1, Expression *e2): E1(e1), E2(e2) {}
     Expression *diff(char x) {
         return new Add(new Mul(E1->diff(x), E2), new Mul(E1, E2->diff(x)));
     }
@@ -103,19 +100,19 @@ public:
         if (*E2 == 1) return E1;
         return this;
     }
-    void print() {
-        out << "(";
-        E1->print();
-        out << "*";
-        E2->print();
-        out << ")";
+    void print(std::ofstream& output) {
+        output << "(";
+        E1->print(output);
+        output << "*";
+        E2->print(output);
+        output << ")";
     }
 };
 
 class Div : public Expression {
     Expression *E1, *E2;
 public:
-    Div(Expression *e1, Expression *e2) : E1(e1), E2(e2) {}
+    Div(Expression *e1, Expression *e2): E1(e1), E2(e2) {}
     Expression *diff(char x) {
         return new Div(new Sub(new Mul(E1->diff(x), E2), new Mul(E1, E2->diff(x))), new Mul(E2, E2));
     }
@@ -126,93 +123,57 @@ public:
         if (*E2 == 1) return E1;
         return this;
     }
-    void print() {
-        out << "(";
-        E1->print();
-        out << ")/(";
-        E2->print();
-        out << ")";
+    void print(std::ofstream& output) {
+        output << "(";
+        E1->print(output);
+        output << ")/(";
+        E2->print(output);
+        output << ")";
     }
 };
 
-class Stack{
-    class Node{
+template <class T>
+class Stack {
+    class Element{
     public:
-        Node* next;
-        char c;
-        Node(char c){ this->c = c; }
+        Element *next;
+        T var;
+        Element(T x): var(x) {};
     };
-    Node *top;
+    Element *top;
 public:
-    Stack(){ top = NULL; }
+    Stack(){
+        top = NULL;
+    }
     ~Stack(){
         while (top != NULL){
-            Node* t = top;
+            Element *t = top;
             top = top->next;
             delete t;
         }
     }
-    void push(char c){
-        Node *n = new Node(c);
-        n->next = top;
-        top = n;
-    }
-    char pop() {
-        Node* t = top;
-        top = top->next;
-        int tdata = t->c;
-        delete(t);
-        return tdata;
-    }
-    bool empty() {
-        return top == NULL;
-    }
-    char last(){
-        if (this->empty())
-            return 0;
-        return top->c;
-    }
-};
-
-class Stack_ex{
-    class Node{
-    public:
-        Node* next;
-        Expression *c;
-        Node(Expression *e) : c(e) {}
-    };
-    Node *top;
-public:
-    Stack_ex(){ top = NULL; }
-    ~Stack_ex(){
-        while (top != NULL){
-            Node* t = top;
-            top = top->next;
-            delete t;
-        }
-    }
-    void push(Expression *c){
-        Node *n = new Node(c);
+    void push(const T var) {
+        Element *n = new Element(var);
         n->next = top;
         top = n;
     }
     bool empty() {
         return top == NULL;
     }
-    Expression *pop(){
-        Node* t = top;
+    T pop() {
+        if (this->empty()) return NULL;
+        Element *t = top;
         top = top->next;
-        Expression *tdata = t->c;
-        delete(t);
+        T tdata = t->var;
+        delete t;
         return tdata;
     }
+    
+    T back(){
+        if (this->empty()) return NULL;
+        return top->var;
+    }
 };
-
-Number *readNumber(char c) {
-    in.putback(c);
-    double x; in >> x;
-    return new Number(x);
-}
 
 int priority(char c) {
     switch (c) {
@@ -226,64 +187,68 @@ int priority(char c) {
     }
 }
 
-Expression *scan() {
-    Expression *e = new Number(0);
+Expression *scan(std::ifstream& input) {
+    Expression *e;
     char c;
     
-    Stack a;
-    Stack_ex res;
+    Stack <Expression *> Result;
+    Stack <char> Procedure;
     
-    while (in >> c && !in.eof()) {
+    while (input >> c && !input.eof()) {
         if (c >= '0' && c <= '9') {
-            e = readNumber(c);
-            res.push(e);
+            input.putback(c);
+            double x; input >> x;
+            Result.push(new Number(x));
         }
         
         if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')){
             e = new Variable(c);
-            res.push(e);
+            Result.push(e);
         }
         
         if (c == '+' || c == '-' || c == '*' || c == '/' || c == '(' || c == ')') {
-            if (a.empty() || c == '(') {
-                a.push(c);
+            if (Procedure.empty() || c == '(') {
+                Procedure.push(c);
             }
             else {
-                while (priority(c) <= priority(a.last()) && a.last() != '(') {
-                    Expression *e2 = res.pop();
-                    Expression *e1 = res.pop();
+                while (priority(c) <= priority(Procedure.back()) && Procedure.back() != '(') {
+                    Expression *e2 = Result.pop();
+                    Expression *e1 = Result.pop();
                     
-                    switch (a.pop()) {
-                        case '-': { res.push(new Sub(e1, e2)); break; }
-                        case '+': { res.push(new Add(e1, e2)); break; }
-                        case '*': { res.push(new Mul(e1, e2)); break; }
-                        case '/': { res.push(new Div(e1, e2)); break; }
+                    switch (Procedure.pop()) {
+                        case '-': { Result.push(new Sub(e1, e2)); break; }
+                        case '+': { Result.push(new Add(e1, e2)); break; }
+                        case '*': { Result.push(new Mul(e1, e2)); break; }
+                        case '/': { Result.push(new Div(e1, e2)); break; }
                     }                    
                 }
-                if (c == ')') a.pop();
-                else a.push(c);
+                if (c == ')') Procedure.pop();
+                else Procedure.push(c);
             }
         }
     }
     
-    while (!a.empty()) {
-        Expression *e2 = res.pop();
-        Expression *e1 = res.pop();
+    while (!Procedure.empty()) {
+        Expression *e2 = Result.pop();
+        Expression *e1 = Result.pop();
         
-        switch (a.pop()) {
-            case '-': { res.push(new Sub(e1, e2)); break; }
-            case '+': { res.push(new Add(e1, e2)); break; }
-            case '*': { res.push(new Mul(e1, e2)); break; }
-            case '/': { res.push(new Div(e1, e2)); break; }
+        switch (Procedure.pop()) {
+            case '-': { Result.push(new Sub(e1, e2)); break; }
+            case '+': { Result.push(new Add(e1, e2)); break; }
+            case '*': { Result.push(new Mul(e1, e2)); break; }
+            case '/': { Result.push(new Div(e1, e2)); break; }
         }
     }
-    return res.pop();
+    return Result.pop();
 }
 
 int main() {
-    Expression *e = scan();
+    std::ifstream in("input.txt");
+    std::ofstream out("output.txt");
+    
+    Expression *e = scan(in);
     Expression *de = e->diff('x');
-    de->print();
+    de->print(out);
     
     in.close();
     out.close();
