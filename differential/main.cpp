@@ -62,15 +62,15 @@ int priority(char c) {
     }
 }
 
-void makeExpression(Stack <Expression *> result, Stack <char> procedure) {
-    Expression *e2 = result.pop();
-    Expression *e1 = result.pop();
+void makeExpression(Stack <Expression *> *result, Stack <char> *procedure) {
+    Expression *e2 = result->pop();
+    Expression *e1 = result->pop();
     
-    switch (procedure.pop()) {
-        case '-': { result.push(new Sub(e1, e2)); break; }
-        case '+': { result.push(new Add(e1, e2)); break; }
-        case '*': { result.push(new Mul(e1, e2)); break; }
-        case '/': { result.push(new Div(e1, e2)); break; }
+    switch (procedure->pop()) {
+        case '-': { result->push(new Sub(e1, e2)); break; }
+        case '+': { result->push(new Add(e1, e2)); break; }
+        case '*': { result->push(new Mul(e1, e2)); break; }
+        case '/': { result->push(new Div(e1, e2)); break; }
     }
 }
 
@@ -99,7 +99,7 @@ Expression *scan(std::ifstream& input) {
             }
             else {
                 while (priority(c) <= priority(procedure.back()) && procedure.back() != '(') {
-                    makeExpression(result, procedure);
+                    makeExpression(&result, &procedure);
                 }
                 if (c == ')') procedure.pop();
                 else procedure.push(c);
@@ -108,7 +108,7 @@ Expression *scan(std::ifstream& input) {
     }
     
     while (!procedure.empty()) {
-        makeExpression(result, procedure);
+        makeExpression(&result, &procedure);
     }
     return result.pop();
 }
