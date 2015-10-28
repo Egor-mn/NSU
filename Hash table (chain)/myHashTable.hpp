@@ -28,12 +28,13 @@ public:
     class iterator {
         HashMap *hash;
         int iteration;
+        int depth;
     public:
-        iterator(HashMap *hash, int num);
+        iterator(HashMap *hash, int num, int depth);
         iterator& operator++();
         bool      operator!=(iterator it);
-        T         operator*();
-        T*        operator->();
+        Element<K, T>  operator*();
+        Element<K, T>* operator->();
     };
     
     iterator begin();

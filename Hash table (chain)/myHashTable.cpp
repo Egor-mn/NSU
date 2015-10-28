@@ -11,28 +11,39 @@
 //implementation of iterator class
 
 template <typename K, typename T>
-HashMap<K, T>::iterator::iterator(HashMap *hash, int num):
-        hash(hash), iteration(num) { }
+HashMap<K, T>::iterator::iterator(HashMap *hash, int num, int depth):
+        hash(hash), iteration(num), depth(depth) { }
 
 template <typename K, typename T>
 typename HashMap<K, T>::iterator& HashMap<K, T>::iterator::operator++() {
-    iteration++;
+    if (hash->a[iteration].get(depth + 1) != nullptr)
+        depth++;
+    else {
+        depth = 0;
+        iteration++;
+        while(iteration < hash->size)
+            if (hash->a[iteration].get(depth))
+                return *this;
+            else
+                iteration++;
+    }
+    
     return *this;
 }
 
 template <typename K, typename T>
 bool HashMap<K, T>::iterator::operator!=(iterator it) {
-    return iteration != it.iteration;
+    return iteration != it.iteration || depth != it.depth;
 }
 
 template <typename K, typename T>
-T HashMap<K, T>::iterator::operator*() {
-    return hash->find(hash->keys[iteration]);
+Element<K, T> HashMap<K, T>::iterator::operator*() {
+    return *hash->a[iteration].get(depth);
 }
 
 template <typename K, typename T>
-T* HashMap<K, T>::iterator::operator->() {
-    return hash->find(hash->keys[iteration]);
+Element<K, T>* HashMap<K, T>::iterator::operator->() {
+    return hash->a[iteration].get(depth);
 }
 
 //implementation of HashMap class
@@ -49,12 +60,21 @@ HashMap<K, T>::~HashMap() {
 
 template <typename K, typename T>
 typename HashMap<K, T>::iterator HashMap<K, T>::begin() {
-    return new iterator(this, 0);
+    for (int i = 0; i < size; i++)
+        if(a[i].get(0))
+            return *new iterator(this, i, 0);
+    
+    return *new iterator(this, 0, 0);
 }
 
 template <typename K, typename T>
 typename HashMap<K, T>::iterator HashMap<K, T>::end() {
-    return new iterator(count);
+    for (int i = size - 1; i >= 0; i--)
+        for (int j = 0; a[i].get(j); j++)
+            if (!a[i].get(j + 1))
+                return *new iterator(this, i, j);
+    
+    return *new iterator(this, 0, 0);
 }
 
 template <typename K, typename T>
