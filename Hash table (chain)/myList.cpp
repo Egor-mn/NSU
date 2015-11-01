@@ -10,145 +10,137 @@
 
 
 template <typename E>
-List<E>::iterator::iterator(List<E> *lst, int num):
-    lst(lst), iteration(num) { };
+List<E>::iterator::iterator(Node *node):
+    node(node) { };
 
 template <typename E>
 typename List<E>::iterator& List<E>::iterator::operator++() {
-    ++iteration;
+    if (node->next)
+        node = node->next;
     return *this;
 }
 
 template <typename E>
 bool List<E>::iterator::operator!=(iterator it) {
-    return iteration != it.iteration;
+    return node != it.node;
+}
+
+template <typename E>
+bool List<E>::iterator::operator==(iterator it) {
+    return node == it.node;
 }
 
 template <typename E>
 E List<E>::iterator::operator*() {
-    return lst->get(iteration);
+    return *node->element;
 }
 
 template <typename E>
 E* List<E>::iterator::operator->() {
-    return lst->get(iteration);
-}
-
-template <typename E>
-int List<E>::iterator::index() {
-    return iteration;
+    return node->element;
 }
 
 template <typename E>
 typename List<E>::iterator List<E>::begin() {
-    return *new iterator(this, 0);
+    List<E>::iterator it = *new iterator(this->top);
+    return it;
 }
 
 template <typename E>
 typename List<E>::iterator List<E>::end() {
-    return *new iterator(this, size);
+    Node *tail = top;
+    if (tail)
+        while (tail->next)
+            tail = tail->next;
+    
+    List<E>::iterator it = *new iterator(tail);
+    return it;
 }
 
 template <typename E>
-List<E>::List(): top(nullptr), size(0) {};
+typename List<E>::iterator List<E>::erase(iterator it) {
+    return ++it;
+}
+
+template <typename E>
+List<E>::List(): top(new Node(nullptr)), list_size(0) {};
 
 template <typename E>
 List<E>::~List() {
     while (top != nullptr){
         Node *t = top;
         top = top->next;
-        delete t->element;
+        if (t->element)
+            delete t->element;
         delete t;
     }
 }
 
 template <typename E>
 void List<E>::push_back(E *element) {
-    Node *n = new Node(element);
-    n->next = nullptr;
-    
-    size++;
-    if (top == nullptr) {
-        top = n;
-        return;
-    }
+    list_size++;
     
     Node *t = top;
     while (t->next)
         t = t->next;
 
-    t->next = n;
+    t->element = element;
+    t->next = new Node(nullptr);
 }
 
 template <typename E>
 bool List<E>::empty() {
-    return top == nullptr;
+    return top->element == nullptr;
 }
 
 template <typename E>
 void List<E>::update(int index, E *element) {
     if (this->empty()) return;
-    if (index == 0) {
-        Node *n = new Node(element);
-        n->next = top->next;
-        Node *d = top;
-        delete d;
-        top = n;
-        return;
-    }
+    if (index == 0)
+        top->element = element;
     
     Node *t = top;
     
-    while (--index != 0)
+    while (--index != 0 && t->next) 
         t = t->next;
     
-    if (t) {
-        Node *d = t->next;
-        Node *n = new Node(element);
-        n->next = d->next;
-        t->next = n;
-        delete d;
-    }
+    t->element = element;
 }
 
 template <typename E>
 void List<E>::remove(int index) {
-    if (this->empty()) return;
-    if (index == 0) {
-        Node *t = top;
-        top = top->next;
-        delete t;
-        size--;
-        return;
-    }
+    if (this->empty() || index > list_size) return;
     
     Node *t = top;
-    
-    while (--index != 0)
+    if (index == 0)
+        top = top->next;
+    else {
+        while (--index != 0 && t->next)
+            t = t->next;
+
+        Node *p = t;
         t = t->next;
-    
-    if (t) {
-        Node *d = t->next;
-        t->next = d->next;
-        delete d;
+        p->next = t->next;
     }
-    size--;
+    
+    list_size--;
+    if (t->next)
+        delete t;
+    return;
 }
 
 template <typename E>
 E* List<E>::get(int index) {
-    if (this->empty()) return nullptr;
-    if (index == 0) {
-        return top->element;
-    }
+    if (this->empty() || index > list_size) return nullptr;
     
     Node *t = top;
-    
     while (index-- != 0)
         t = t->next;
     
-    if (t) {
-        return t->element;
-    }
-    return nullptr;
+    return t->element;
+}
+
+template <typename E>
+size_t List<E>::size() {
+    return list_size;
 }

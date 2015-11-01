@@ -9,6 +9,8 @@
 #ifndef myList_hpp
 #define myList_hpp
 
+#include <cstddef>
+
 template <typename K, typename T>
 struct Element{
     K key;
@@ -24,15 +26,15 @@ class List {
         Node(E *el): element(el), next(nullptr) {};
     };
     Node *top;
-    int size;
+    size_t list_size;
 public:
     class iterator {
-        List<E> *lst;
-        int iteration;
+        Node *node;
     public:
-        iterator(List<E> *lst, int num);
+        iterator(Node *node);
         iterator& operator++();
         bool      operator!=(iterator it);
+        bool      operator==(iterator it);
         E         operator*();
         E*        operator->();
         int       index();
@@ -40,6 +42,7 @@ public:
     
     iterator begin();
     iterator end();
+    iterator erase(iterator);
     
      List();
     ~List();
@@ -49,6 +52,7 @@ public:
     bool empty();
     void remove(int index);
     E*   get(int index);
+    size_t size();
 };
 
 #endif /* myList_hpp */

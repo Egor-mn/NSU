@@ -11,137 +11,164 @@
 //implementation of iterator class
 
 template <typename K, typename T>
-HashMap<K, T>::iterator::iterator(HashMap *hash, int num, int depth):
-        hash(hash), iteration(num), depth(depth) { }
+HashMap<K, T>::iterator::iterator(HashMap *hash, size_t iteration, typename List<Element<K, T>>::iterator it):
+        hash(hash), iteration(iteration), list_it(it) { }
 
 template <typename K, typename T>
 typename HashMap<K, T>::iterator& HashMap<K, T>::iterator::operator++() {
-    if (hash->a[iteration].get(depth + 1) != nullptr)
-        depth++;
-    else {
-        depth = 0;
-        iteration++;
-        while(iteration < hash->size)
-            if (hash->a[iteration].get(depth))
-                return *this;
-            else
-                iteration++;
-    }
+    HashMap<K, T>::iterator it = hash->end();
     
+    if (*this == it) return *this;
+    else if ((++list_it, *this == it) || (list_it != hash->buckets[iteration].end())) return *this;
+    else {
+        for (int i = 0; i < hash->size; i++) {
+            iteration++;
+            list_it = hash->buckets[iteration].begin();
+            if (list_it != hash->buckets[iteration].end())
+                return *this;
+        }
+    }
     return *this;
 }
 
 template <typename K, typename T>
 bool HashMap<K, T>::iterator::operator!=(iterator it) {
-    return iteration != it.iteration || depth != it.depth;
+    return list_it != it.list_it;
+}
+
+template <typename K, typename T>
+bool HashMap<K, T>::iterator::operator==(iterator it) {
+    return list_it == it.list_it;
 }
 
 template <typename K, typename T>
 Element<K, T> HashMap<K, T>::iterator::operator*() {
-    return *hash->a[iteration].get(depth);
+    return *list_it;
 }
 
 template <typename K, typename T>
 Element<K, T>* HashMap<K, T>::iterator::operator->() {
-    return hash->a[iteration].get(depth);
+    return list_it.operator->();
 }
 
 //implementation of HashMap class
 
 template <typename K, typename T>
-HashMap<K, T>::HashMap(int size): count(0), size(size) {
-    a = new List<Element<K, T>>[size];
+HashMap<K, T>::HashMap(size_t size): hash_count(0), size(size) {
+    buckets = new List<Element<K, T>>[size];
 }
 
 template <typename K, typename T>
 HashMap<K, T>::~HashMap() {
-    delete[] a;
+    delete[] buckets;
 }
 
 template <typename K, typename T>
 typename HashMap<K, T>::iterator HashMap<K, T>::begin() {
-    for (int i = 0; i < size; i++)
-        if(a[i].get(0))
-            return *new iterator(this, i, 0);
+    typename List<Element<K, T>>::iterator new_list_iter = buckets[0].begin();
+    typename HashMap<K, T>::iterator new_iter = *new iterator(this, 0, new_list_iter);
+    for (size_t i = 0; i < size; i++)
+        if(!buckets[i].empty()){
+            new_list_iter = buckets[i].begin();
+            new_iter = *new iterator(this, i, new_list_iter);
+            return new_iter;
+        }
     
-    return *new iterator(this, 0, 0);
+    return new_iter;
 }
 
 template <typename K, typename T>
 typename HashMap<K, T>::iterator HashMap<K, T>::end() {
-    for (int i = size - 1; i >= 0; i--)
-        for (int j = 0; a[i].get(j); j++)
-            if (!a[i].get(j + 1))
-                return *new iterator(this, i, j);
-    
-    return *new iterator(this, 0, 0);
+    typename List<Element<K, T>>::iterator new_list_iter = buckets[0].end();
+    typename HashMap<K, T>::iterator new_iter = *new iterator(this, 0, new_list_iter);
+    size_t i = size - 1;
+    while (i--)
+        if (!buckets[i].empty()) {
+            new_list_iter = buckets[i].end();
+            new_iter = *new iterator(this, i, new_list_iter);
+            return new_iter;
+        }
+
+    return new_iter;
 }
 
 template <typename K, typename T>
-void HashMap<K, T>::add(K key, T value) {
-    int x = getHash(key) % size;
-    for (typename List<Element<K, T>>::iterator it = a[x].begin(); it != a[x].end(); ++it)
-        if (it->key == key)
-            return a[x].update(it.index(), new Element<K, T>(key, value));
-        
-    a[x].push_back(new Element<K, T>(key, value));
-    count++;
+void HashMap<K, T>::insert(K key, T value) {
+    if (size < 0.5 * hash_count)
+        rehash(2 * size);
+    size_t x = getBucketIndex(key);
+    for (typename List<Element<K, T>>::iterator it = buckets[x].begin(); it != buckets[x].end(); ++it)
+        if (it->key == key) {
+            it->value = value;
+            return;
+        }
+    
+    buckets[x].push_back(new Element<K, T>(key, value));
+    hash_count++;
+    return;
 }
 
 template <typename K, typename T>
 T* HashMap<K, T>::find(K key) {
-    int x = getHash(key) % size;
+    size_t x = getBucketIndex(key);
     
-    for (typename List<Element<K, T>>::iterator it = a[x].begin(); it != a[x].end(); ++it)
+    for (typename List<Element<K, T>>::iterator it = buckets[x].begin(); it != buckets[x].end(); ++it)
         if (it->key == key)
             return &it->value;
     
-    return NULL;
+    return nullptr;
 }
 
 template <typename K, typename T>
-void HashMap<K, T>::del(K key) {
-    int x = getHash(key) % size;
+void HashMap<K, T>::erase(K key) {
+    size_t x = getBucketIndex(key);
     
-    for (typename List<Element<K, T>>::iterator it = a[x].begin(); it != a[x].end(); ++it)
+    int i = 0;    
+    for (typename List<Element<K, T>>::iterator it = buckets[x].begin(); it != buckets[x].end(); ++it, i++)
         if (it->key == key) {
-            count--;
-            return a[x].remove(it.index());
+            hash_count--;
+            buckets[x].remove(i);
+            return;
         }
 }
 
 template <typename K, typename T>
-int HashMap<K, T>::getSize() {
-    return count;
+size_t HashMap<K, T>::count() {
+    return hash_count;
 }
 
 template <typename K, typename T>
-int HashMap<K, T>::uniqueValue() {
+size_t HashMap<K, T>::uniqueValue() {
     HashMap<T, int> hash_v(size);
     
     for (int i = 0; i < size; i++)
-        if (!a[i].empty())
-            for (int j = 0; a[i].get(j); j++)
-                hash_v.add(a[i].get(j)->value, 0);
+        if (!buckets[i].empty())
+            for (int j = 0; buckets[i].get(j); j++)
+                hash_v.insert(buckets[i].get(j)->value, 0);
     
-    return hash_v.getSize();
+    return hash_v.count();
 }
 
 template <typename K, typename T>
-void HashMap<K, T>::reHash() {
-    if (count > 0.6 * size) {
-        HashMap<K, T> *n_hash = new HashMap<K, T>(size * 2);
+void HashMap<K, T>::rehash(size_t n) {
+    if (n > hash_count) {
+        HashMap<K, T> *n_hash = new HashMap<K, T>(n);
         for (int i = 0; i < size; i++) {
-            if (!a[i].empty())
-                for (int j = 0; a[i].get(j); j++)
-                    n_hash->add(a[i].get(j)->key, a[i].get(j)->value);
+            if (!buckets[i].empty())
+                for (int j = 0; buckets[i].get(j); j++)
+                    n_hash->insert(buckets[i].get(j)->key, buckets[i].get(j)->value);
             
         }
         
-        List<Element<K, T>> *b = a;
-        this->a = n_hash->a;
+        List<Element<K, T>> *b = buckets;
+        this->buckets = n_hash->buckets;
         this->size = n_hash->size;
-        n_hash->a = b;
+        n_hash->buckets = b;
         delete n_hash;
     }
+}
+
+template <typename K, typename T>
+size_t HashMap<K, T>::getBucketIndex(K key) {
+    return getHash(key) % size;
 }

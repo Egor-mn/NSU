@@ -20,35 +20,37 @@ size_t getHash(K key) {
 
 template <typename K, typename T>
 class HashMap {
-    int size;
-    int count;
-    List<Element<K, T>> *a;
+    size_t size;
+    size_t hash_count;
+    List<Element<K, T>> *buckets;
 public:
     
     class iterator {
         HashMap *hash;
-        int iteration;
-        int depth;
+        size_t iteration;
+        typename List<Element<K, T>>::iterator list_it;
     public:
-        iterator(HashMap *hash, int num, int depth);
+        iterator(HashMap *hash, size_t iteration, typename List<Element<K, T>>::iterator it);
         iterator& operator++();
         bool      operator!=(iterator it);
+        bool      operator==(iterator it);
         Element<K, T>  operator*();
         Element<K, T>* operator->();
     };
     
+     HashMap(size_t size);
+    ~HashMap();
+    
     iterator begin();
     iterator end();
     
-     HashMap(int size);
-    ~HashMap();
-    
-    void add(K key, T value);
-    void del(K key);
+    void insert(K key, T value);
+    void erase(K key);
+    void rehash(size_t n);
     T*   find(K key);
-    int  getSize();
-    int  uniqueValue();
-    void reHash();
+    size_t uniqueValue();
+    size_t count();
+    size_t getBucketIndex(K key);
 };
 
 #endif /* myHashTable_hpp */

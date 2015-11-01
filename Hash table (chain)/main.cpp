@@ -23,25 +23,24 @@ void doAll(std::ifstream& in, std::ofstream& out) {
     
     in >> n;
     while (n--) {
-        hash.reHash();
         in >> c;
         
         switch (c) {
             case 'A':
                 in >> key >> value;
-                hash.add(key, value);
+                hash.insert(key, value);
                 break;
                 
             case 'R':
                 in >> key;
-                hash.del(key);
+                hash.erase(key);
                 break;
                 
             default:
                 break;
         }
     }
-    out << hash.getSize() << ' '
+    out << hash.count() << ' '
         << hash.uniqueValue();
 }
 
