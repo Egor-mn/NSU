@@ -23,17 +23,17 @@ void DLexpression::print(std::ofstream& output) {
     throw "ERROR";
 }
 
-void env::addVar(std::string id, DLexpression *ex) {
+void DLexpression::env::addVar(std::string id, DLexpression *ex) {
     env_map[id] = ex;
 }
 
-DLexpression *env::fromEnv(std::string id) {
+DLexpression *DLexpression::env::fromEnv(std::string id) {
     if (env_map.find(id) != env_map.end())
         return env_map[id];
     else throw "ERROR";
 }
 
-DLexpression *DLval::eval() {
+DLexpression *DLval::eval(env l_env) {
     return this;
 }
 
@@ -45,33 +45,33 @@ void DLval::print(std::ofstream& output) {
     output << "(val " << val << ")" << std::endl;
 }
 
-DLexpression *DLvar::eval() {
-    return environment.fromEnv(id);
+DLexpression *DLvar::eval(env l_env) {
+    return l_env.fromEnv(id);
 }
 
-DLexpression *DLadd::eval() {
-    return new DLval(ex1->eval()->getValue() + ex2->eval()->getValue());
+DLexpression *DLadd::eval(env l_env) {
+    return new DLval(ex1->eval(l_env)->getValue() + ex2->eval(l_env)->getValue());
 }
 
-DLexpression *DLif::eval() {
-    if (ex1->eval()->getValue() > ex2->eval()->getValue())
-        return e_then->eval();
+DLexpression *DLif::eval(env l_env) {
+    if (ex1->eval(l_env)->getValue() > ex2->eval(l_env)->getValue())
+        return e_then->eval(l_env);
     else
-        return e_else->eval();
+        return e_else->eval(l_env);
 }
 
-DLexpression *DLlet::eval() {
-    environment.addVar(id, value->eval());
-    return body->eval();
+DLexpression *DLlet::eval(env l_env) {
+    l_env.addVar(id, value->eval());
+    return body->eval(l_env);
 }
 
-DLexpression *DLfunction::eval() {
+DLexpression *DLfunction::eval(env l_env) {
     return this;
 }
 
-DLexpression *DLcall::eval() {
-    environment.addVar(f_expr->eval()->id(), arg_expr->eval());
-    return f_expr->eval()->body()->eval();
+DLexpression *DLcall::eval(env l_env) {
+    l_env.addVar(f_expr->eval(l_env)->id(), arg_expr->eval(l_env));
+    return f_expr->eval(l_env)->body()->eval(l_env);
 }
 
 void makeExpression(std::stack <DLexpression *> *result, std::stack <std::string> *procedure) {
