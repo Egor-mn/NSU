@@ -8,14 +8,13 @@
 
 #ifndef jacobi_h
 #define jacobi_h
-#endif /* jacobi_h */
 
 #include "stdio.h"
 #include "math.h"
 
-#define n_max 10
-#define max_iteration 20
-#define eps 1e-6
+#define n_max 20
+#define max_iteration 1000000
+#define eps 1e-10
 
 typedef double vector[n_max];
 typedef double matrix[n_max][n_max];
@@ -46,7 +45,7 @@ void subVectors(vector a, vector b, int size, vector res);
 
 double getDotProduct(vector a, vector b, int size);
 
-double getMaxOffDiagonal(matrix m, int size);
+double getMaxOffDiagonal(matrix m, int size, int *i, int *j);
 
 double getAverageOffDiagonal(matrix m, int size);
 
@@ -62,3 +61,4 @@ int roundRobin(matrix m, matrix eigen_vectors, int size);
 
 void analysisOfResults(matrix m, matrix orig, matrix eigen_vectors, int size);
 
+#endif /* jacobi_h */
