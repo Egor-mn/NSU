@@ -26,7 +26,7 @@ public:
     virtual int getValue();
     virtual DLexpression *body();
     virtual std::string id();
-    virtual void print(std::ofstream& output);
+    virtual void print(std::ostream& output);
 };
 
 class DLval : public DLexpression {
@@ -35,7 +35,7 @@ class DLval : public DLexpression {
 public:
     DLval(int n): val(n) {}
     DLexpression *eval(env environment = env());
-    void print(std::ofstream& output);
+    void print(std::ostream& output);
 };
 
 class DLvar : public DLexpression {
@@ -86,6 +86,6 @@ public:
     DLexpression *eval(env environment = env());
 };
 
-DLexpression* scan(std::istream& input);
+DLexpression* scan(std::string str);
 
 #endif /* DL_h */

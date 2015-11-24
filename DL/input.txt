@@ -1,0 +1,3 @@
+(let F = (function arg (if(var arg)(val 1)then(add(var arg)(call(var F)(add(var arg)(val -1))))else(val 1)))in
+(let B = (val 4) in
+(call(var F)(var B))))

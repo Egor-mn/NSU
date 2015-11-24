@@ -19,7 +19,7 @@ std::string DLexpression::id() {
     throw "ERROR";
 }
 
-void DLexpression::print(std::ofstream& output) {
+void DLexpression::print(std::ostream& output) {
     throw "ERROR";
 }
 
@@ -41,7 +41,7 @@ int DLval::getValue() {
     return val;
 }
 
-void DLval::print(std::ofstream& output) {
+void DLval::print(std::ostream& output) {
     output << "(val " << val << ")" << std::endl;
 }
 
@@ -74,117 +74,78 @@ DLexpression *DLcall::eval(env l_env) {
     return f_expr->eval(l_env)->body()->eval(l_env);
 }
 
-void makeExpression(std::stack <DLexpression *> *result, std::stack <std::string> *procedure) {
+std::string makeExp(std::string str, int& j) {
+    std::string exp_str;
     
-    if (procedure->empty())
-        return;
+    while(str[j] != '(')
+        j++;
     
-    std::string str;
-    do {
-        str = procedure->top();
-        procedure->pop();
-    } while (str == " " && !procedure->empty());
-    
-    std::istringstream iss (str, std::istringstream::in);
-    
-    std::string str1;
-    iss >> str1;
-    
-    if (str1 == "val") {
-        int integer;
-        iss >> integer;
-        result->push(new DLval(integer));
+    int n = 1;
+    for (j++; j < str.size(); j++) {
+        if (str[j] == '(') n++;
+        if (str[j] == ')') n--;
+        if (n == 0)        break;
+        exp_str.push_back(str[j]);
     }
+    j++;
     
-    if (str1 == "var") {
-        std::string id;
-        iss >> id;
-        result->push(new DLvar(id));
-    }
-    
-    if (str1 == "add") {
-        DLexpression *e2 = result->top();
-        result->pop();
-        DLexpression *e1 = result->top();
-        result->pop();
-        result->push(new DLadd(e1, e2));
-    }
-    
-    if (str1 == "else") {
-        str1 = procedure->top();
-        procedure->pop();
-        if (str1 == "then") {
-            str1 = procedure->top();
-            procedure->pop();
-            if (str1 == "if") {
-                DLexpression *e4 = result->top();
-                result->pop();
-                DLexpression *e3 = result->top();
-                result->pop();
-                DLexpression *e2 = result->top();
-                result->pop();
-                DLexpression *e1 = result->top();
-                result->pop();
-                result->push(new DLif(e1, e2, e3, e4));
-            }
-        }
-    }
-    
-    if (str1 == "in") {
-        str1 = procedure->top();
-        procedure->pop();
-        std::istringstream iss2 (str1, std::istringstream::in);
-        std::string str2;
-        iss2 >> str2;
-        if (str2 == "let") {
-            iss2 >> str2;
-            DLexpression *e2 = result->top();
-            result->pop();
-            DLexpression *e1 = result->top();
-            result->pop();
-            result->push(new DLlet(str2, e1, e2));
-        }
-    }
-    
-    if (str1 == "function") {
-        iss >> str1;
-        DLexpression *e1 = result->top();
-        result->pop();
-        result->push(new DLfunction(str1, e1));
-    }
-    
-    if (str1 == "call") {
-        DLexpression *e2 = result->top();
-        result->pop();
-        DLexpression *e1 = result->top();
-        result->pop();
-        result->push(new DLcall(e1, e2));
-    }
+    return exp_str;
 }
 
-DLexpression* scan(std::istream& input) {
-    char c;
-    std::stack<DLexpression*> result;
-    std::stack<std::string> procedure;
-    std::string str;
-    
-    input >> std::noskipws;
-    while (!input.eof()) {
-        input >> c;
-        if (c == '(') {
-            if (!str.empty())
-                procedure.push(str);
-            
-            str.clear();
-        } else if (c == ')') {
-            if (!str.empty())
-                procedure.push(str);
-            
-            str.clear();
-            makeExpression(&result, &procedure);
-        }  else if (c != '\n')
-            str.push_back(c);
+DLexpression* scan(std::string str) {
+    for (int i = 0; i < str.size(); i++) {
+        if (str[i] == ' ')
+            continue;
+        else if (str[i] == 'v' && str[i + 1] == 'a' && str[i + 2] == 'l') {
+            std::istringstream iss (str, std::istringstream::in);
+            std::string id;
+            int integer;
+            iss >> id >> integer;
+            return new DLval(integer);
+        }
+        else if (str[i] == 'v' && str[i + 1] == 'a' && str[i + 2] == 'r') {
+            std::istringstream iss (str, std::istringstream::in);
+            std::string id;
+            iss >> id >> id;
+            return new DLvar(id);
+        }
+        else if (str[i] == 'a' && str[i + 1] == 'd' && str[i + 2] == 'd') {
+            int j = i + 3;
+            std::string s1 = makeExp(str, j);
+            std::string s2 = makeExp(str, j);
+            return new DLadd(scan(s1), scan(s2));
+        }
+        else if (str[i] == 'i' && str[i + 1] == 'f') {
+            int j = i + 2;
+            std::string s1 = makeExp(str, j);
+            std::string s2 = makeExp(str, j);
+            std::string s3 = makeExp(str, j);
+            std::string s4 = makeExp(str, j);
+            return new DLif(scan(s1), scan(s2), scan(s3), scan(s4));
+        }
+        else if (str[i] == 'l' && str[i + 1] == 'e' && str[i + 2] == 't') {
+            std::istringstream iss (str, std::istringstream::in);
+            std::string id;
+            iss >> id >> id;
+            int j = i + 4;
+            std::string s1 = makeExp(str, j);
+            std::string s2 = makeExp(str, j);
+            return new DLlet(id, scan(s1), scan(s2));
+        }
+        else if (str[i] == 'f' && str[i + 1] == 'u' && str[i + 2] == 'n' && str[i + 3] == 'c' && str[i + 4] == 't' && str[i + 5] == 'i' && str[i + 6] == 'o' && str[i + 7] == 'n') {
+            std::istringstream iss (str, std::istringstream::in);
+            std::string id;
+            iss >> id >> id;
+            int j = i + 8;
+            std::string s1 = makeExp(str, j);
+            return new DLfunction(id, scan(s1));
+        }
+        else if (str[i] == 'c' && str[i + 1] == 'a' && str[i + 2] == 'l' && str[i + 3] == 'l') {
+            int j = i + 3;
+            std::string s1 = makeExp(str, j);
+            std::string s2 = makeExp(str, j);
+            return new DLcall(scan(s1), scan(s2));
+        }
     }
-    
-    return result.top();
+    throw "ERROR";
 }
