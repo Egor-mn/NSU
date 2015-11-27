@@ -8,6 +8,7 @@
 
 #include "DL.h"
 
+#include <iostream>
 int main() {
     /*DLexpression *ex = new DLlet("A", new DLval(20), new DLlet("B", new DLval(30), new DLif( new DLvar("A"), new DLadd( new DLvar("B"), new DLval(3)), new DLval(10), new DLadd( new DLvar("B"), new DLval(1)))));*/
     /*DLexpression *ex = new DLlet("F", new DLfunction("arg", new DLadd( new DLvar("arg"), new DLval(1))), new DLlet("V", new DLval(-1), new DLcall( new DLvar("F"), new DLvar("V"))));*/
@@ -26,10 +27,12 @@ int main() {
     
     try {
         ex = scan(str);
-        ex->eval()->print(out);
+        ex->eval()->print(std::cout);
     } catch (const char* error) {
-        out << error << std::endl;
+        std::cout << error << std::endl;
     }
+    
+    delete ex;
     
     in.close();
     out.close();

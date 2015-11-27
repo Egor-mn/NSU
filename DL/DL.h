@@ -22,9 +22,10 @@ protected:
         DLexpression *fromEnv(std::string id);
     };
 public:
+    virtual ~DLexpression() {};
     virtual DLexpression *eval(env environment = env()) = 0;
     virtual int getValue();
-    virtual DLexpression *body();
+    virtual DLexpression *body(env l_env);
     virtual std::string id();
     virtual void print(std::ostream& output);
 };
@@ -33,7 +34,7 @@ class DLval : public DLexpression {
     int val;
     int getValue();
 public:
-    DLval(int n): val(n) {}
+    DLval(int n);
     DLexpression *eval(env environment = env());
     void print(std::ostream& output);
 };
@@ -41,21 +42,23 @@ public:
 class DLvar : public DLexpression {
     std::string id;
 public:
-    DLvar(std::string id): id(id) {}
+    DLvar(std::string id);
     DLexpression *eval(env environment = env());
 };
 
 class DLadd : public DLexpression {
     DLexpression *ex1, *ex2;
 public:
-    DLadd(DLexpression *e1, DLexpression *e2): ex1(e1), ex2(e2) {}
+    DLadd(DLexpression *e1, DLexpression *e2);
+    ~DLadd();
     DLexpression *eval(env environment = env());
 };
 
 class DLif : public DLexpression {
     DLexpression *ex1, *ex2, *e_then, *e_else;
 public:
-    DLif(DLexpression *e1, DLexpression *e2, DLexpression *e_then, DLexpression *e_else): ex1(e1), ex2(e2), e_then(e_then), e_else(e_else) {}
+    DLif(DLexpression *e1, DLexpression *e2, DLexpression *e_then, DLexpression *e_else);
+    ~DLif();
     DLexpression *eval(env environment = env());
 };
 
@@ -64,17 +67,20 @@ class DLlet : public DLexpression {
     DLexpression *value;
     DLexpression *body;
 public:
-    DLlet(std::string id, DLexpression *value, DLexpression *body): id(id), value(value), body(body) {}
+    DLlet(std::string id, DLexpression *value, DLexpression *body);
+    ~DLlet();
     DLexpression *eval(env environment = env());
 };
 
 class DLfunction : public DLexpression {
     std::string arg_id;
     DLexpression *f_body;
+    env myEnv;
 public:
-    DLfunction(std::string id, DLexpression *ex): arg_id(id), f_body(ex) {}
-    std::string id() { return arg_id; }
-    DLexpression *body() { return f_body; }
+    DLfunction(std::string id, DLexpression *ex);
+    ~DLfunction();
+    std::string id();
+    DLexpression *body(env l_env);
     DLexpression *eval(env environment = env());
 };
 
@@ -82,7 +88,8 @@ class DLcall : public DLexpression {
     DLexpression *f_expr;
     DLexpression *arg_expr;
 public:
-    DLcall(DLexpression *e1, DLexpression *e2): f_expr(e1), arg_expr(e2) {}
+    DLcall(DLexpression *e1, DLexpression *e2);
+    ~DLcall();
     DLexpression *eval(env environment = env());
 };
 
