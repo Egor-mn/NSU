@@ -12,6 +12,8 @@
 #include <stdio.h>
 #include "math.h"
 
+//#define double float
+
 #define n_max 20
 #define max_iteration 1000000
 #define eps 1e-10
@@ -21,6 +23,8 @@ typedef double matrix[n_max][n_max];
 
 void inputFileMatrix(matrix m, int *size);
 void printMatrix(matrix m, int size);
-void getHessenbergMatrix(matrix m, int size, matrix h);
+void getHessenbergMatrix(matrix m, int size, matrix h, matrix store);
+void getHessenbergMatrixBack(matrix m, int size, matrix h, matrix store);
+double getRelativeError(matrix m, matrix m1, int size);
 
 #endif /* hessenberg_h */

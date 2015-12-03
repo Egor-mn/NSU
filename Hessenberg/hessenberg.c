@@ -102,7 +102,6 @@ void multiplyMatrixConst(matrix a, double c, int size) {
 
 void multiplyMatrix(matrix a, matrix b, int size, matrix res) {
     double sum = 0;
-    matrix res1;
     
     for (int i = 0; i < size; i++) {
         for (int j = 0; j < size; j++) {
@@ -110,23 +109,71 @@ void multiplyMatrix(matrix a, matrix b, int size, matrix res) {
             for (int n = 0; n < size; n++)
                 sum += a[i][n] * b[n][j];
 
-            res1[i][j] = sum;
-        }
-    }
-    
-    for (int i = 0; i < size; i++) {
-        for (int j = 0; j < size; j++) {
-            sum = 0;
-            for (int n = 0; n < size; n++)
-                sum += res1[i][n] * a[j][n];
-
             res[i][j] = sum;
         }
     }
 }
 
-void getHessenbergMatrix (matrix m, int size, matrix h) {
-    matrix I, R, N, res;
+double getDotProduct(vector a, vector b, int size) {
+    double sum = 0;
+    
+    for (int i = 0; i < size; i++)
+        sum += a[i] * b[i];
+    
+    return sum;
+}
+
+void transposeMatrix(matrix m, int size) {
+    matrix a;
+    copyMatrix(a, m, size);
+    for (int i = 0; i < size; i++) {
+        for (int j = 0; j < size; j++) {
+            m[i][j] = a[j][i];
+        }
+    }
+}
+
+void multiplyMatrixVector(matrix m, vector v, int size, vector res) {
+    double sum = 0;
+    
+    for (int i = 0; i < size; i++) {
+        sum = 0;
+        for (int j = 0; j < size; j++) {
+            sum += m[i][j] * v[j];
+        }
+        res[i] = sum;
+    }
+}
+
+void copyVector(vector a, vector b, int size) {
+    for (int i = 0; i < size; i++) {
+        a[i] = b[i];
+    }
+}
+
+double getMatrixNorm(matrix m, int size) {
+    double max = - 1000;
+    for (int i = 0; i < size; i++) {
+        for (int j = 0; j < size; j++) {
+            if (fabs(m[i][j]) > max) {
+                max = fabs(m[i][j]);
+            }
+        }
+    }
+    return max;
+}
+
+double getRelativeError(matrix m, matrix m1, int size) {
+    matrix res;
+    subMatrix(m, m1, size, res);
+    double delta1 = getMatrixNorm(res, size);
+    double delta2 = getMatrixNorm(m, size);
+    
+    return delta1 / delta2;
+}
+
+void getHessenbergMatrix (matrix m, int size, matrix h, matrix store) {
+    matrix I, R, t_R, N, res;
     vector x,y,w;
     
     copyMatrix(h, m, size);
@@ -153,6 +200,43 @@ void getHessenbergMatrix (matrix m, int size, matrix h) {
         subMatrix(I, N, size, R);
         
         multiplyMatrix(R, h, size, res);
-        copyMatrix(h, res, size);
+        copyMatrix(t_R, R, size);
+        transposeMatrix(t_R, size);
+        multiplyMatrix(res, t_R, size, h);
+        
+        for (int j = 0; j < size; j++) {
+            store[k][j] = w[j];
+        }
+    }
+}
+
+void getHessenbergMatrixBack (matrix m, int size, matrix h, matrix store) {
+    matrix I, R, t_R, N, res;
+    vector w;
+    
+    copyMatrix(h, m, size);
+    
+    for (int k = size - 3; k >= 0 ; k--) {
+        setIdentityMatrix(I, size);
+        
+        for (int j = 0; j < size; j++) {
+            w[j] = store[k][j];
+        }
+        
+        multiplyVectors(w, w, size, N);
+        multiplyMatrixConst(N, 2, size);
+        
+        subMatrix(I, N, size, R);
+        
+        multiplyVectors(w, w, size, N);
+        multiplyMatrixConst(N, 2, size);
+        
+        subMatrix(I, N, size, R);
+        
+        copyMatrix(t_R, R, size);
+        transposeMatrix(t_R, size);
+        
+        multiplyMatrix(t_R, h, size, res);
+        multiplyMatrix(res, R, size, h);
     }
 }
