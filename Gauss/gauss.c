@@ -5,7 +5,7 @@
 //  Created by Egor Manylov on 28.02.16.
 //  Copyright © 2016 Egor Manylov. All rights reserved.
 //
-
+#include <stdlib.h>
 #include "gauss.h"
 
 int row[n_max], col[n_max];
@@ -30,6 +30,10 @@ uint transpositions;
     else
         printf("Can't open input file.\n");
 }*/
+
+uint transp() {
+    return transpositions;
+}
 
 void inputFileMatrix(matrix m, vector b, int *size) {
     FILE * input;
@@ -61,7 +65,7 @@ void inputFileMatrix(matrix m, vector b, int *size) {
 void multiplyMatrixVector (matrix m, vector v, int size, vector res);
 
 void hilbertMatrix(matrix m, vector y, vector b, int *size) {
-    int s = 0; //is given by the teacher
+    double s = sqrt(3)/3; //is given by the teacher
     double C;
     
     printf("Enter size of matrix: ");
@@ -69,7 +73,7 @@ void hilbertMatrix(matrix m, vector y, vector b, int *size) {
     
     for (int i = 0; i < *size; i++)
         for (int j = 0; j < *size; j++)
-            m[i][j] = 1.0 / (i + j + 1 - s);
+            m[i][j] = 1.0 / (i + j + 2 - s);
     
     printf("Enter constant C: ");
     scanf("%lf", &C);
@@ -155,11 +159,42 @@ void rookPivoting (matrix m, int *i, int *j, int size) {
     }
 }
 
+void getMaxSub(matrix m, int* i, int* j, int size) {
+    int im = *i, jm = *j;
+    double max = m[im][jm];
+    for(int a = im; a < size; a++)
+        for(int b = jm; b <size; b++)
+            if (fabs(m[a][b])>fabs(m[im][jm])){
+                im = a; jm = b;
+                max = m[a][b];
+            };
+    *i = im;
+    *j = jm;
+};
+
 void swap (int *arr, int i, int j) {
     if (i != j) transpositions++;
     int n = arr[i];
     arr[i] = arr[j];
     arr[j] = n;
+}
+
+double perturbationMethod(int ind, matrix m, vector b, int size) {
+    vector x, dx, x1;
+    vector db, db1;
+    for (int i = 0; i < size; i++) {
+        double r = rand() % 1000;
+        r = r / 1000.0;
+        db[i] = b[i] + 0.05 * (1 - 2 * r) * b[i];
+        db1[i] = 0.05 * (1 - 2 * r) * b[i];
+    }
+    
+    GaussianElimination(m, x, b, size, rookPivoting);
+    GaussianElimination(m, dx, db, size, rookPivoting);
+    
+    subVectors(dx, x, size, x1);
+    
+    return getVectorNorm(ind, x1, size) * getVectorNorm(ind, b, size) / (getVectorNorm(ind, db1, size) * getVectorNorm(ind, x, size));
 }
 
 void LUdecomposition (matrix A, matrix LU, int size, void (*pivot)(matrix, int *, int *, int)) {

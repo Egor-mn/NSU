@@ -13,9 +13,14 @@
 #include "math.h"
 
 #define n_max 20
+//#define double float
 
 typedef double vector[n_max];
 typedef double matrix[n_max][n_max];
+
+uint transp();
+
+double perturbationMethod(int ind, matrix m, vector b, int size);
 
 void inputFileMatrix(matrix m, vector b, int *size);  //especially for old fart
 
